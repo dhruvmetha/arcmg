@@ -12,6 +12,9 @@ levels/
 *logs/
 tmp*/
 output/
+outputs/
+*.log
+*.pth
 .vscode/launch.json
 .vscode/
 dist/

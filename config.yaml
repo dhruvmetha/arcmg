@@ -1,0 +1,25 @@
+data:
+  data_dir: /media/dhruv/a7519aee-b272-44ae-a117-1f1ea1796db6/2024/arcmg/data/pendulum_lqr/pendulum_lqr5k/pendulum_lqr5k
+  mask_ratio_range:
+  - 0.0
+  - 1.0
+  seq_len: 500
+logging:
+  log_interval: 100
+  save_interval: 1000
+model:
+  batch_first: true
+  d_model: 64
+  dim_feedforward: 256
+  input_dim: 2
+  nhead: 1
+  num_layers: 3
+  use_positional_encoding: false
+training:
+  batch_size: 128
+  clip_value: 1.0
+  device: cuda
+  learning_rate: 0.0001
+  num_epochs: 20
+  save_dir: checkpoints/
+  save_path: checkpoints/transformer_model.pth

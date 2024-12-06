@@ -1,0 +1,16 @@
+distillation_model:
+  model_dir: outputs/distillation/20241114_190528
+
+transformer_model:
+  model_dir: outputs/transformer/20241114_171726
+
+model:
+  input_dim: 2
+  output_dim: 2
+
+
+data:
+  data_dir: /media/dhruv/a7519aee-b272-44ae-a117-1f1ea1796db6/2024/arcmg/data/pendulum_lqr/pendulum_lqr5k/pendulum_lqr5k
+  seq_len: 500
+
+output_dir: outputs/test

@@ -1,0 +1,13 @@
+data:
+  path: /media/dhruv/a7519aee-b272-44ae-a117-1f1ea1796db6/2024/arcmg/data/pendulum_lqr/pendulum_representation_dataset_5k/20241114_175801/dataset.npz
+  max_samples: 100000
+
+model:
+  input_dim: 2
+  output_dim: 64
+
+training:
+  num_epochs: 30
+  batch_size: 1024
+  learning_rate: 0.0001
+  save_path: checkpoints/distillation_model.pth

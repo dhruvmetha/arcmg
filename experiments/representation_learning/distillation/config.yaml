@@ -1,0 +1,13 @@
+data:
+  path: 'dataset/output_dataset.npz'
+
+model:
+  input_dim: 2
+  output_dim: 64
+  save_path: 'distillation/trained_distillation_model.pth'
+  # You can add model-specific configurations here if needed
+
+training:
+  batch_size: 32
+  learning_rate: 0.001
+  num_epochs: 10

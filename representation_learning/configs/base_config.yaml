@@ -1,0 +1,17 @@
+# Base configuration that can be extended by specific models
+data:
+  data_dir: ""
+  seq_len: 500
+
+training:
+  batch_size: 128
+  learning_rate: 0.0001
+  num_epochs: 100
+  device: cuda
+  save_dir: checkpoints/
+  clip_value: 1.0
+  save_path: checkpoints/model.pth
+
+logging:
+  log_interval: 100
+  save_interval: 1000 

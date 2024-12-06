@@ -20,8 +20,8 @@ def main(args, kwargs):
     save_base_data = kwargs.get('save_base_data', False)
     # save_final_data = kwargs.get('save_final_data', False)
     # save_images = kwargs.get('save_images', False)
-    # make_video = kwargs.get('make_video', False)
-    radius = kwargs.get('radius', 0.2)
+    # make_video = kwargs.get('make_video', False)  
+    radius = kwargs.get('radius', 0.05)
     # folder = kwargs.get('folder', "levels")
 
     # level_interval = kwargs.get('level_interval', 1)
@@ -35,6 +35,8 @@ def main(args, kwargs):
 
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
+
+    print(f"Saving data to {save_dir}")
 
     # data_att = dict()
     # if args.att_file != '':
@@ -117,11 +119,48 @@ def main(args, kwargs):
         dataset = np.loadtxt(os.path.join(save_dir, f"dataset_{dataset_size}.csv"), delimiter=',')
         print("Done", dataset.shape)
 
+    # Create three subplots for attractor heatmaps
+    fig, ax = plt.subplots(1, 3, figsize=(15, 5))
     
-    fig, ax = plt.subplots(1, 2)
-    ax[0].scatter(pos_dataset[:, 0], pos_dataset[:, 1], c='green', s=1)
-    ax[1].scatter(neg_dataset[:, 0], neg_dataset[:, 1], c='red', s=1)
-    plt.savefig(f"dataset_{dataset_size}.png")
+    # Create grid for heatmap
+    x_grid = np.linspace(-3.14, 3.14, 50)
+    y_grid = np.linspace(-6.28, 6.28, 50)
+    X_grid, Y_grid = np.meshgrid(x_grid, y_grid)
+    
+    # Initialize probability matrices for each attractor
+    prob_matrices = [np.zeros_like(X_grid) for _ in range(3)]
+    
+    # Count occurrences for each grid cell and attractor
+    for data_point in dataset:
+        x, y = data_point[0], data_point[1]
+        attractor_class = int(data_point[-1])  # Assuming last column is the attractor class
+        
+        # Find corresponding grid cell
+        x_idx = np.argmin(np.abs(x_grid - x))
+        y_idx = np.argmin(np.abs(y_grid - y))
+        
+        if attractor_class >= 0 and attractor_class < 3:  # Ensure valid attractor class
+            prob_matrices[attractor_class][y_idx, x_idx] += 1
+    
+    # Normalize and plot heatmaps
+    titles = ['Attractor 0', 'Attractor 1', 'Attractor 2']
+    for i in range(3):
+        # Normalize probabilities
+        total = np.sum(prob_matrices[i])
+        if total > 0:
+            prob_matrices[i] = prob_matrices[i] / total
+        
+        # Create heatmap
+        im = ax[i].pcolormesh(X_grid, Y_grid, prob_matrices[i], 
+                             shading='auto', cmap='hot')
+        ax[i].set_title(titles[i])
+        ax[i].set_xlabel('θ')
+        ax[i].set_ylabel('ω')
+        plt.colorbar(im, ax=ax[i])
+    
+    plt.tight_layout()
+    plt.savefig(f"attractor_heatmaps_{dataset_size}.png")
+    plt.close()
 
 if __name__ == "__main__":
 
@@ -134,11 +173,11 @@ if __name__ == "__main__":
     kwargs['make_video'] = False
     kwargs['radius'] = 0.05
     kwargs['folder'] = "levels"
-    kwargs['dataset_size'] = '1k'
+    kwargs['dataset_size'] = '5k'
     kwargs['level_interval'] = 20
     kwargs['samples'] = 100
     kwargs['cwd'] = f"/media/dhruv/a7519aee-b272-44ae-a117-1f1ea1796db6/2024/arcmg"
-    kwargs['save_dir'] = f"{kwargs['cwd']}/data/pendulum_clf/{kwargs['dataset_size']}"
+    kwargs['save_dir'] = f"{kwargs['cwd']}/data/pendulum_clf_{kwargs['samples']}/{kwargs['dataset_size']}"
 
     cwd = "/media/dhruv/a7519aee-b272-44ae-a117-1f1ea1796db6/2024/arcmg"
 
@@ -158,18 +197,20 @@ if __name__ == "__main__":
 
 
     args = parser.parse_args()
+    main(args, kwargs)
+
     
     # dataset collection
-    dataset_sizes = ['1k'] # ['1k', '10k', '50k']
-    level_intervals = [20]
+    # dataset_sizes = ['5k'] # ['1k', '10k', '50k']
+    # level_intervals = [20]
 
-    for dataset_size in dataset_sizes:
-        for level_interval in level_intervals:
-            kwargs['dataset_size'] = dataset_size
-            kwargs['level_interval'] = level_interval
-            kwargs['save_dir'] = f"{kwargs['cwd']}/data/pendulum/clf_{kwargs['dataset_size']}"
-            print(f"Dataset size: {dataset_size}, Level interval: {level_interval}")
-            main(args, kwargs)
+    # for dataset_size in dataset_sizes:
+    #     for level_interval in level_intervals:
+    #         kwargs['dataset_size'] = dataset_size
+    #         kwargs['level_interval'] = level_interval
+    #         kwargs['save_dir'] = f"{kwargs['cwd']}/data/pendulum/clf_{kwargs['dataset_size']}"
+    #         print(f"Dataset size: {dataset_size}, Level interval: {level_interval}")
+    #         main(args, kwargs)
 
 # grid-based #
 # ctr_dict = dict()
