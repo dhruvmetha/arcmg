@@ -8,7 +8,7 @@ levels/
 *.gif
 *.mp4
 *png
-*data/
+*data1/
 *logs/
 tmp*/
 output/
