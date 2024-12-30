@@ -2,12 +2,13 @@ import argparse
 from tqdm import tqdm
 from systems.ramp import Ramp
 from systems.ramp_rot import Ramp_rot
+from systems.homoclinic import Homoclinic
 from arcmg.config import Config
 import os
 import yaml
 import numpy as np
 
-slope = 2
+slope = 1.75
 
 # Right now this file is creating data with a uniform distribution on specified set of intervals
 
@@ -24,11 +25,18 @@ def main(args):
 
 
     if config.name == "rampfn":
-        Ramp_system = Ramp(slope, config.input_dimension)
+        current_system = Ramp(slope, config.input_dimension)
     elif config.name == "ramp_rot":
-        Ramp_system = Ramp_rot(slope)
+        current_system = Ramp_rot(slope)
+    elif config.name == "homoclinic":
+        current_system = Ramp_rot(slope)
     else:
         NotImplemented
+
+
+    # a = Ramp_system.f(np.array([1,0]))
+    # b = Ramp_system.f(np.array([-1,0]))
+    # exit()
 
         
 
@@ -39,8 +47,8 @@ def main(args):
 
     counter = 0
     for i in range(args.num_traj):
-        traj = Ramp_system.label_trajectory(length=length, region=np.array([[-0.4, 0.4]]+[[-1, 1]]*(config.input_dimension-1)))
-
+        # traj = current_system.label_trajectory(length=length, region=np.array([[-1, 1]]+[[-1, 1]]*(config.input_dimension-1)))
+        traj = current_system.label_trajectory(length=length, region=current_system.get_bounds())
         traj = np.array(traj)
         np.savetxt(f"{save_dir}/{counter}.txt",traj,delimiter=",")
         counter += 1
@@ -49,11 +57,13 @@ if __name__ == "__main__":
 
     # yaml_file_path = os.getcwd() + "/output/ramp/"
     yaml_file_path = os.getcwd() + "/output/ramp_rot/"
+    yaml_file_path = os.getcwd() + "/output/homoclinic/"
     yaml_file = "config.yaml"
     # save_dir = "/data/ramp"
     save_dir = "/data/ramp_rot"
-    num_traj = 1
-    length = 100
+    save_dir = "/data/homoclinic"
+    num_traj = 1000
+    length = 4
 
     parser = argparse.ArgumentParser()
     #  parser.add_argument('--job_index',help='Job index',type=int,default=0)

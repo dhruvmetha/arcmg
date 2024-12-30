@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 
 
 def get_label(system, end_point):
+    # This function determines the label of a given end point based on the system.
     if system == "pendulum":
         pendulum_ = Pendulum()
         return pendulum_.which_attracting_region(end_point)
@@ -16,103 +17,83 @@ def get_label(system, end_point):
         return NotImplementedError
 
 def main(args, kwargs):
-
+    # Extract parameters from kwargs
     save_base_data = kwargs.get('save_base_data', False)
     save_final_data = kwargs.get('save_final_data', False)
     save_images = kwargs.get('save_images', False)
-    make_video = kwargs.get('make_video', False)
     radius = kwargs.get('radius', 0.2)
-    folder = kwargs.get('folder', "levels")
-
     level_interval = kwargs.get('level_interval', 1)
     dataset_size = kwargs.get('dataset_size', '1k')
     save_dir = kwargs.get('save_dir', f"{os.getcwd()}/data/pendulum/{dataset_size}")
 
-    os.makedirs(folder, exist_ok=True)
-    
+    # Ensure save directory exists
+    os.makedirs(save_dir, exist_ok=True)
 
-    if not os.path.exists(save_dir):
-        os.makedirs(save_dir)
-
-    data_att = dict()
-    if args.att_file != '':
-        with open(args.att_file) as csv_file:
-            csv_reader = csv.reader(csv_file, delimiter=',')
-            for row in csv_reader:
-                data_att[row[0]]=int(row[1])
-
+    # Initialize the Pendulum system
     system = Pendulum()
 
-    
-    # discretize the state space
-    x = np.linspace(-3.14, 3.14, 200)
-    y = np.linspace(-6.28, 6.28, 400)
-    X, Y = np.meshgrid(x, y)
-    
+    dataset = process_data(args, system, radius, save_base_data, save_dir, dataset_size)
 
-    
-    attractors = system.attractors()
-    # plot circles
-    for i in attractors:
-        circle = plt.Circle((i[0], i[1]), radius, color='r', fill=False)
-        plt.gca().add_artist(circle)
-    dataset = []
+    # Normalize the dataset
+    dataset = normalize_dataset(dataset, level_interval)
 
-    # base data corresponds to a one time dataset processing for cleaning up the trajectories
-    # save this once by assigning save_base_data=True and then use it to create any level-based dataset by assigning save_base_data=False 
-    if save_base_data:
-        # counting-based # 
-        for f in tqdm(os.listdir(args.data_dir)):
-            data = np.loadtxt(os.path.join(args.data_dir, f), delimiter=',')
-            attractor_class, attractor = system.which_attracting_region(data[-1, :], rad=radius)
-            if attractor_class == -1:
-                continue
-
-            first_attractor_idx = (np.linalg.norm(data[:, :] - attractor, axis=1) < radius).nonzero()[0][0] + 1 # get the first attractor index
-            temp = np.zeros((first_attractor_idx, 5)) # create a temporary array to store the data
-            temp[:, :2] = data[:first_attractor_idx, :]
-            temp[:, 2] = np.arange(first_attractor_idx).tolist()[::-1]
-            for i in range(first_attractor_idx):
-                dataset.append(temp[i, :].tolist() + [attractor_class])
-
-        dataset = np.array(dataset)
-
-        print("Writing dataset...")
-        np.savetxt(os.path.join(save_dir, f"dataset_{dataset_size}.csv"), dataset, delimiter=',')
-        print("Done", dataset.shape)
-
-    else:
-        print("Loading dataset...")
-        dataset = np.loadtxt(os.path.join(save_dir, f"dataset_{dataset_size}.csv"), delimiter=',')
-        print("Done", dataset.shape)
-
-    
-    # data normalization
-    dataset[:, 3] = dataset[:, 2] // level_interval # divide by level_interval
-    max_levels = np.max(dataset[:, 3]) # get the maximum level
-    dataset[:, 4] = (max_levels - dataset[:, 3]) + 1 # reverse the levels and +1 to start from 1 instead of 0
-    dataset[:, 3] = (max_levels - dataset[:, 3]) + 1 # reverse the levels and +1 to start from 1 instead of 0
-    dataset[:, 4] = dataset[:, 4] / (max_levels+1) # normalize the levels
-    mul = np.ones_like(dataset[:, 4])
-    mul[dataset[:, 5] > 0] = -1
-    dataset[:, 4] = dataset[:, 4] * mul # multiply by -1 if the attractor is not 0
-
-    # final_data corresponds to the final dataset processing for the level-based dataset
     if save_final_data:
         print("Writing dataset...")
         np.savetxt(os.path.join(save_dir, f"dataset_{dataset_size}_{level_interval}.csv"), dataset, delimiter=',')
         print("Done", dataset.shape)
 
     if save_images:
-        # plot dataset here with dataset[:, :2] as x and y and dataset[:, 4] as color
-        print('plotting now...')
-        plt.figure(figsize=(10, 10))
-        plt.grid()
-        plt.scatter(dataset[:, 0], dataset[:, 1], s=0.1, c=dataset[:, 4], cmap='rainbow')
-        plt.colorbar()
-        plt.xlim(-3.14, 3.14)
-        plt.ylim(-6.28, 6.28)
-        plt.savefig(f'level_{dataset_size}_{level_interval}.png')
+        plot_dataset(dataset, dataset_size, level_interval)
+
+def process_data(args, system, radius, save_base_data, save_dir, dataset_size):
+    if save_base_data:
+        dataset = []
+        for f in tqdm(os.listdir(args.data_dir)):
+            data = np.loadtxt(os.path.join(args.data_dir, f), delimiter=',')
+            attractor_class, attractor = system.which_attracting_region(data[-1, :], rad=radius)
+            
+            if attractor_class == -1:
+                continue
+
+            first_attractor_idx = np.argmax(np.linalg.norm(data - attractor, axis=1) < radius) + 1
+
+            temp = np.column_stack((
+                data[:first_attractor_idx, :2],
+                np.arange(first_attractor_idx)[::-1],
+                np.zeros(first_attractor_idx),
+                np.full(first_attractor_idx, attractor_class)
+            ))
+            
+            dataset.extend(temp)
+
+        dataset = np.array(dataset)
+        np.savetxt(os.path.join(save_dir, f"dataset_{dataset_size}.csv"), dataset, delimiter=',')
+        print("Dataset saved:", dataset.shape)
+    else:
+        print("Loading dataset...")
+        dataset = np.loadtxt(os.path.join(save_dir, f"dataset_{dataset_size}.csv"), delimiter=',')
+        print("Dataset loaded:", dataset.shape)
+
+    return dataset
+
+def normalize_dataset(dataset, level_interval):
+    max_levels = np.max(dataset[:, 2] // level_interval)
+    
+    dataset[:, 3] = max_levels - (dataset[:, 2] // level_interval) + 1
+    dataset[:, 4] = dataset[:, 3] / (max_levels + 1)
+    dataset[:, 4] *= np.where(dataset[:, 5] > 0, -1, 1)
+
+    return dataset
+
+def plot_dataset(dataset, dataset_size, level_interval):
+    print('Plotting dataset...')
+    plt.figure(figsize=(10, 10))
+    plt.grid()
+    plt.scatter(dataset[:, 0], dataset[:, 1], s=0.1, c=dataset[:, 4], cmap='rainbow')
+    plt.colorbar()
+    plt.xlim(-3.14, 3.14)
+    plt.ylim(-6.28, 6.28)
+    plt.savefig(f'level_{dataset_size}_{level_interval}.png')
 
 
 if __name__ == "__main__":
@@ -127,7 +108,7 @@ if __name__ == "__main__":
     kwargs['radius'] = 0.05
     kwargs['folder'] = "levels"
     kwargs['dataset_size'] = '50k'
-    kwargs['level_interval'] = 20
+    kwargs['level_interval'] = 1
     kwargs['cwd'] = f"/media/dhruv/a7519aee-b272-44ae-a117-1f1ea1796db6/2024/arcmg"
     kwargs['save_dir'] = f"{kwargs['cwd']}/data/pendulum/{kwargs['dataset_size']}"
 
@@ -149,18 +130,18 @@ if __name__ == "__main__":
 
 
     args = parser.parse_args()
-    
+    main(args, kwargs)
     # dataset collection
-    dataset_sizes = ['50k'] # ['1k', '10k', '50k']
-    level_intervals = [20]
+    # dataset_sizes = ['50k'] # ['1k', '10k', '50k']
+    # level_intervals = [20]
 
-    for dataset_size in dataset_sizes:
-        for level_interval in level_intervals:
-            kwargs['dataset_size'] = dataset_size
-            kwargs['level_interval'] = level_interval
-            kwargs['save_dir'] = f"{kwargs['cwd']}/data/pendulum/{kwargs['dataset_size']}"
-            print(f"Dataset size: {dataset_size}, Level interval: {level_interval}")
-            main(args, kwargs)
+    # for dataset_size in dataset_sizes:
+    #     for level_interval in level_intervals:
+    #         kwargs['dataset_size'] = dataset_size
+    #         kwargs['level_interval'] = level_interval
+    #         kwargs['save_dir'] = f"{kwargs['cwd']}/data/pendulum/{kwargs['dataset_size']}"
+    #         print(f"Dataset size: {dataset_size}, Level interval: {level_interval}")
+    #         main(args, kwargs)
 
 # grid-based #
 # ctr_dict = dict()
@@ -172,7 +153,7 @@ if __name__ == "__main__":
 #     attractor_class, attractor = system.which_attracting_region(data[-1, :], rad=radius)
 #     if attractor_class == -1:
 #         continue
-#     first_attractor_idx = (np.linalg.norm(data[:, :] - attractor, axis=1) < radius).nonzero()[0][0] + 1
+#     first_attractor_idx = (np.linal`g.norm(data[:, :] - attractor, axis=1) < radius).nonzero()[0][0] + 1
 #     temp = np.zeros((first_attractor_idx, 3))
 #     temp[:, :2] = data[:first_attractor_idx, :]
 #     temp[:, 2] = np.arange(first_attractor_idx).tolist()[::-1]

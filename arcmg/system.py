@@ -20,7 +20,8 @@ class BaseSystem:
         if region is False:
             region = self.get_true_bounds()
         sample_ = np.random.uniform(region[:,0], region[:,1], size=(num_pts, self.dimension()))
-        return self.transform(sample_)[0]
+        return sample_[0]
+        # return self.transform(sample_)[0]
     
     def sample_trajectory(self, length=4, region = False):
         if region is False:
@@ -47,15 +48,22 @@ class BaseSystem:
             else:
                 if label != -1:
                     label += 2
+            end_point = self.transform(end_point)
             labeled_traj.append(end_point.tolist() + [label])
         return labeled_traj[::-1]
+
+    def attractors(self):
+        return None
 
     def which_attracting_region(self, s):
         """defaut -1: attracting region not specified"""
         return -1
-        
 
-
+    def normalize(self, s, data_min, data_max):
+        return (2*(s - data_min) / (data_max - data_min)) - 1
+    
+    def denormalize(self, s, data_min, data_max):
+        return 2*(s + 1) / 2 * (data_max - data_min) + data_min
     
     def get_bounds(self): # bounds on the embedded space
         return self.state_bounds

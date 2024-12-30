@@ -1,0 +1,15 @@
+data:
+  data_dir: /media/dhruv/a7519aee-b272-44ae-a117-1f1ea1796db6/2024/arcmg/data/pendulum_lqr/pendulum_lqr5k/pendulum_lqr5k
+  seq_len: 500
+
+model:
+  input_dim: 2  # or whatever your input dimension is
+  d_model: 64  # should match your transformer's d_model
+  nhead: 4
+  num_layers: 3
+  dim_feedforward: 256
+  distillation_path: 'distillation/distillation_model.pth'
+  transformer_path: 'trained_transformer.pth'
+
+training:
+  batch_size: 32

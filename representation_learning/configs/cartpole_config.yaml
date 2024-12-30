@@ -1,0 +1,66 @@
+# Base configuration that can be extended by specific models
+# set variables in the script
+data_dir: &data_dir /media/dhruv/a7519aee-b272-44ae-a117-1f1ea1796db6/2024/arcmg/data/cartpole_1k/cartpole_lqr1k
+transformer:
+  data:
+    data_dir: *data_dir
+    seq_len: 500
+    mask_ratio_range: [0.5, 0.75]
+  model:
+    input_dim: 4
+    latent_dim: 64
+    nhead: 1
+    num_layers: 3
+    dim_feedforward: 512
+    use_positional_encoding: false
+  training:
+    num_epochs: 100
+    batch_size: 128
+    learning_rate: 0.0001
+    device: cuda
+    save_dir: checkpoints
+    clip_value: 1.0
+    
+  logging:
+    log_interval: 100
+    save_interval: 1000
+
+distillation:
+  data:
+    path: outputs/cartpole/representation_dataset
+    max_samples: 100000
+
+  model:
+    input_dim: 4
+    output_dim: 64
+
+  training:
+    num_epochs: 100
+    batch_size: 512
+    learning_rate: 0.0001
+    device: cuda
+    clip_value: 1.0
+    save_path: checkpoints/cartpole/distillation_model.pth
+
+reachability_classifier:
+  generation:
+    data_dir: *data_dir
+    samples_per_trajectory: 50
+  
+  data:
+    path: outputs/cartpole/reachability_dataset/dataset.npz
+  distillation_model: "outputs/cartpole/distillation"
+
+  model:
+    input_dim: 8  # 64*2 if using representations, 2*2 if using raw coordinates
+    hidden_dims: [512, 512, 512]
+    dropout: 0.0
+  
+  training:
+    use_representations: false
+    batch_size: 512
+    learning_rate: 0.001
+    num_epochs: 100
+    device: "cuda"
+
+

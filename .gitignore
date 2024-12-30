@@ -8,10 +8,15 @@ levels/
 *.gif
 *.mp4
 *png
-*data/
+*data1/
 *logs/
 tmp*/
 output/
+outputs/
+*.log
+*.pth
+*.npy
+*.npz
 .vscode/launch.json
 .vscode/
 dist/

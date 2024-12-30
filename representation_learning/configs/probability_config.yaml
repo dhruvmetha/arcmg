@@ -1,0 +1,22 @@
+model:
+  input_dim: 67  # 64*2 if using representations, 2*2 if using raw coordinates
+  hidden_dims: [512, 512, 512]
+  dropout: 0.0
+
+distillation_model:
+  model_dir: "outputs/distillation"
+
+classifier_model:
+  model_dir: "outputs/5k_diff_balance_small"
+
+training:
+  use_representations: true
+  batch_size: 512
+  learning_rate: 0.0005
+  num_epochs: 20
+  device: "cuda"
+
+data:
+  path: /media/dhruv/a7519aee-b272-44ae-a117-1f1ea1796db6/2024/arcmg/data/pendulum_lqr/probability_dataset.npz
+  
+output_dir: "outputs/probability_classifier"
