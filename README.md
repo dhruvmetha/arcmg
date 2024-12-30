@@ -3,7 +3,6 @@
 ## Installation
 ```
 git clone https://github.com/dhruvmetha/arcmg.git roa-estimation
-git checkout dev_dhruv_1
 cd roa-estimation
 pip install -e .
 ```
