@@ -7,10 +7,16 @@ from ..utils.logger import setup_logger
 from ..utils.logging_utils import TrainerLoggingMixin, log_epoch, log_step
 import json
 from datetime import datetime
+from experiments.systems import system_factory
+
 
 class BaseTrainer(ABC, TrainerLoggingMixin):
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: Dict[str, Any], system_name=None):
         self.config = config
+        if system_name is None:
+            print("Attach a physics system to the trainer")
+            exit()
+        self.system = system_factory[system_name]()
         self.device = torch.device(config['training']['device'])
         self.logger = setup_logger(self.__class__.__name__)
         
@@ -49,7 +55,6 @@ class BaseTrainer(ABC, TrainerLoggingMixin):
             raise ValueError(f"Unknown validation type: {validation_type}")
         validation_method = self._validation_functions[validation_type].__get__(self, self.__class__)
         return validation_method()
-
         
     def save_checkpoint(self, path: Path, is_best: bool = False):
         """Save a checkpoint of the model and training state."""

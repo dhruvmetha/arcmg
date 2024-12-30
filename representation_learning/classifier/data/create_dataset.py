@@ -4,8 +4,9 @@ from pathlib import Path
 from typing import Tuple, List
 import glob
 from tqdm import tqdm
-from experiments.systems.pendulum import Pendulum
+from experiments.systems import system_factory
 import random
+from representation_learning.utils.config import ConfigManager
 import pickle
 
 def sample_positive_pairs(
@@ -41,7 +42,8 @@ def create_reachability_dataset(
     trajectory_path: Path,
     output_path: Path,
     samples_per_trajectory: int = 10,
-    attractor_data: bool = True
+    system_name: str = 'pendulum',
+    attractor_data: bool = False
 ) -> None:
     """
     Create a dataset for reachability classification.
@@ -57,7 +59,9 @@ def create_reachability_dataset(
     print(f"Loading trajectories from {trajectory_path}")
     trajectories = glob.glob(str(trajectory_path / '*.txt'))
     trajectories = [np.loadtxt(traj_path, delimiter=',') for traj_path in trajectories]
+    print(f"Loaded {len(trajectories)} trajectories")
     
+    system = system_factory[system_name]()
     # Initialize lists for dataset
     sources = []
     targets = []
@@ -68,25 +72,30 @@ def create_reachability_dataset(
     incomplete_trajectories = []
     all_trajectories = []
 
-    system = Pendulum()
+    # system = None # Pendulum()
     rad = 0.05
     
     # Generate positive and negative samples
     for traj_idx, trajectory in enumerate(tqdm(trajectories, desc="Processing trajectories")):
-        attractor_class, attractor = system.which_attracting_region(trajectory[-1, :], rad=rad)
-        all_trajectories.append(trajectory)
-        if attractor_class == -1:
-            first_attractor_idx = trajectory.shape[0]
-            incomplete_trajectories.append(trajectory)
+        
+        all_trajectories.extend(trajectory)
+        if system.attractors() is not None:
+            attractor_class, attractor = system.which_attracting_region(trajectory[-1, :], rad=rad)
+            if attractor_class == -1:
+                first_attractor_idx = trajectory.shape[0]
+                # incomplete_trajectories.append(trajectory)
+            else:
+                # first point that enters the attractor's neighborhood
+                first_attractor_idx = np.where(np.linalg.norm(trajectory - attractor, axis=1) < rad)[0][0] + 1
+                complete_trajectories.append((trajectory[:first_attractor_idx], attractor_class))
         else:
-            # first point that enters the attractor's neighborhood
-            first_attractor_idx = np.where(np.linalg.norm(trajectory - attractor, axis=1) < rad)[0][0] + 1
-            complete_trajectories.append((trajectory[:first_attractor_idx], attractor_class))
+            first_attractor_idx = trajectory.shape[0]
+            # complete_trajectories.append((trajectory, -1))
         
         new_samples_per_trajectory = samples_per_trajectory
         first_point = trajectory[0]
-        if abs(first_point[1]) > np.pi:
-            new_samples_per_trajectory *= 2
+        # if abs(first_point[1]) > np.pi:
+        #     new_samples_per_trajectory *= 2
         for _ in range(new_samples_per_trajectory):
             source, target = sample_positive_pairs(
                 trajectory, 
@@ -117,8 +126,9 @@ def create_reachability_dataset(
                     targets.append(traj[-1])
                     labels.append(1)
         
-    full_dataset = np.concatenate(all_trajectories.copy(), axis=0).tolist()
+    full_dataset = all_trajectories.copy()
     random.shuffle(full_dataset)
+    print(f"Full dataset length: {len(full_dataset)}")
 
     # sample negative pairs from the full dataset
     for _ in range(len(sources)):
@@ -127,6 +137,7 @@ def create_reachability_dataset(
         targets.append(full_dataset[idx2])
         labels.append(0)  # Negative label
 
+
     sources = np.array(sources)
     targets = np.array(targets)
     labels = np.array(labels)
@@ -134,6 +145,8 @@ def create_reachability_dataset(
     
     # Save dataset
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    file_name = output_path.stem
+    print(file_name)
     np.savez(
         output_path,
         sources=sources,
@@ -144,45 +157,51 @@ def create_reachability_dataset(
     print(f"Dataset created with {len(labels)} samples")
     print(f"Positive samples: {np.sum(labels == 1)}")
     print(f"Negative samples: {np.sum(labels == 0)}")
-
-    sources = []
-    labels = []
-    for traj, attractor_class in tqdm(complete_trajectories, desc="Processing complete trajectories"):
-        one_hot = np.zeros((1, len(system.attractors())))
-        one_hot[0, attractor_class] = 1
-        
-        for _ in range(samples_per_trajectory):
-            idx = np.random.randint(0, len(traj))
-            sources.append(traj[idx])
-            labels.append(one_hot)
     
-    sources = np.array(sources)
-    labels = np.array(labels)
-    # Save complete trajectories
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    np.savez(
-        output_path.parent / 'probability_dataset.npz',
-        sources=sources,
-        labels=labels
-    )
+    if system is not None:
+        sources = []
+        labels = []
+        for traj, attractor_class in tqdm(complete_trajectories, desc="Processing complete trajectories"):
+            one_hot = np.zeros((1, len(system.attractors())))
+            one_hot[0, attractor_class] = 1
+            
+            for _ in range(samples_per_trajectory):
+                idx = np.random.randint(0, len(traj))
+                sources.append(traj[idx])
+                labels.append(one_hot)
+        
+        sources = np.array(sources)
+        labels = np.array(labels)
+        # Save complete trajectories
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        np.savez(
+            output_path.parent / f'probability_{file_name}.npz',
+            sources=sources,
+            labels=labels
+        )
 
-    print(f"Probability dataset created with {len(labels)} samples")
+        print(f"Probability dataset created with {len(labels)} samples")
 
 
 if __name__ == "__main__":
     import argparse
     
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data_dir", type=Path, required=True, help="Directory containing trajectory data")
-    parser.add_argument("--output_file", type=Path, required=True, help="Full path to the output file, for example: outputs/classifier/reachability_dataset.npz")
-    parser.add_argument("--samples_per_trajectory", type=int, default=10, help="Number of samples to generate per trajectory")
-    parser.add_argument("--attractor_data", type=bool, default=True, help="Whether to use attractor data")
-    
+    parser.add_argument("--config", type=Path, required=True, help="Path to the config file")
+    parser.add_argument("--output_dir", type=Path, required=True, help="Path to the output directory")
+    parser.add_argument("--system", type=str, required=True, help="System name")
     args = parser.parse_args()
-    
+
+    full_config = ConfigManager.load_specific_config(args.config)
+    config = full_config['reachability_classifier']
+
+    samples_per_trajectory = config['generation']['samples_per_trajectory']
+    data_dir = config['generation']['data_dir']
+    output_dir = args.output_dir
+    system_name = args.system
     create_reachability_dataset(
-        trajectory_path=args.data_dir,
-        output_path=args.output_file,
-        samples_per_trajectory=args.samples_per_trajectory,
-        attractor_data=args.attractor_data
+        trajectory_path=Path(data_dir),
+        output_path=Path(output_dir),
+        samples_per_trajectory=samples_per_trajectory,
+        system_name=system_name
     )

@@ -12,10 +12,10 @@ from ...models.distillation import create_distillation_model
 from representation_learning.utils.config import ConfigManager
 
 class ClassifierTrainer(BaseTrainer):
-    def __init__(self, config: Dict):
+    def __init__(self, config: Dict, system_name: str):
 
         self.distillation_config = None
-        self.distillation_model_dir = Path(config['distillation_model']['model_dir'])
+        self.distillation_model_dir = Path(config['distillation_model'])
 
         # Load distillation model if using representations
         if config['training'].get('use_representations', True):
@@ -23,7 +23,7 @@ class ClassifierTrainer(BaseTrainer):
         else:
             self.distillation_model = None
             
-        super().__init__(config)
+        super().__init__(config, system_name)
         # self.criterion = torch.nn.BCEWithLogitsLoss() 
         # self.distillation_model = self.distillation_model.to(self.device)
 
@@ -39,7 +39,7 @@ class ClassifierTrainer(BaseTrainer):
         model = create_distillation_model(**self.distillation_config['model'])
        
         checkpoint = torch.load(
-            "outputs/distillation"/Path(self.distillation_config['training']['save_dir']) / 'best_model.pth', 
+            model_dir / 'checkpoints/best_model.pth', 
         )
         model.load_state_dict(checkpoint['model_state_dict'])
         model.eval()
@@ -50,7 +50,8 @@ class ClassifierTrainer(BaseTrainer):
         dataset = ReachabilityDataset(
             data_path=self.config['data']['path'],
             distillation_model=self.distillation_model,
-            use_representations=self.config['training'].get('use_representations', True)
+            use_representations=self.config['training'].get('use_representations', True),
+            normalize=lambda data, data_min, data_max: self.system.normalize(data, data_min, data_max)
         )
         
         # Split dataset

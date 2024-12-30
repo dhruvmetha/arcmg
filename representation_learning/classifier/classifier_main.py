@@ -6,6 +6,7 @@ import yaml
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Train a classifier model')
+    parser.add_argument('--system', type=str, help='System to train the classifier for')
     parser.add_argument('--config', type=str, 
                       default='representation_learning/configs/classifier_config.yaml',
                       help='Path to the config file')
@@ -17,23 +18,24 @@ def parse_args():
 
 def main():
     args = parse_args()
+    system_name = args.system
     
     # Load configuration
-    config = ConfigManager.load_config(args.config)
-
+    full_config = ConfigManager.load_config(args.config)
+    config = full_config['reachability_classifier']
     # Override output directory if specified
-    if args.output_dir:
-        config['output_dir'] = args.output_dir
+    # if args.output_dir:
+    #     config['output_dir'] = args.output_dir
     
     # Create output directory
-    output_dir = Path(config['output_dir'])
+    output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
     with open(output_dir / 'config.yaml', 'w') as f:
         yaml.dump(config, f)
 
     # Initialize trainer
-    trainer = ClassifierTrainer(config)
+    trainer = ClassifierTrainer(config, system_name)
     
     # Load checkpoint if specified
     if args.checkpoint:

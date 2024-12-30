@@ -1,12 +1,14 @@
 #!/bin/bash
 
 # Directory containing checkpoints
-CHECKPOINT_DIR="outputs/transformer/20241114_171726/checkpoints/best_model.pth"
-CONFIG_PATH="representation_learning/configs/transformer_config.yaml"
+SYSTEM="pendulum"
 TRAINER="transformer"
+CHECKPOINT_DIR="outputs/"$SYSTEM"/"$TRAINER"/checkpoints/best_model.pth"
+CONFIG_PATH="representation_learning/configs/"$SYSTEM"_config.yaml"
 
 # Run visualization
 python -m representation_learning.main \
+    --system "$SYSTEM" \
     --config "$CONFIG_PATH" \
     --trainer "$TRAINER" \
     --mode visualize \

@@ -33,3 +33,15 @@ class Pendulum(BaseSystem):
             return 2, attractors[2]
         else:
             return -1, None
+
+    # override the normalize method
+    def normalize(self, s, data_min, data_max):
+        s[:, 0] = s[:, 0] / np.pi
+        s[:, 1] = s[:, 1] / (2 * np.pi)
+        return s
+    
+    # override the denormalize method
+    def denormalize(self, s, data_min, data_max):
+        s[:, 0] = s[:, 0] * np.pi
+        s[:, 1] = s[:, 1] * 2 * np.pi
+        return s

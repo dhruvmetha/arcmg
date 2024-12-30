@@ -77,7 +77,7 @@ def evaluate_full_trajectories(
     batch_outputs = []
     
     with torch.no_grad():
-        for full_traj, _, _, _ in val_loader:
+        for full_traj, _, _, _, _ in val_loader:
             # Use full trajectory as input (no masking)
             full_traj = full_traj.to(device)
             output = model(full_traj)

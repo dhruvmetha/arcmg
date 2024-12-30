@@ -7,7 +7,7 @@ class ConfigManager:
     @staticmethod
     def load_config(config_path: Path) -> Dict[str, Any]:
         
-        print(config_path)
+        # print(config_path)
         # Load base config
         base_config_path = Path(config_path).parent / 'base_config.yaml'
         with open(base_config_path, 'r') as f:
@@ -30,7 +30,7 @@ class ConfigManager:
     
     @staticmethod
     def load_specific_config(config_path: Path) -> Dict[str, Any]:
-        print(config_path)
+        # print(config_path)
         with open(config_path, 'r') as f:
             specific_config = yaml.safe_load(f)
         # ConfigManager._validate_config(specific_config, config_path.stem)

@@ -4,6 +4,7 @@ from torch.utils.data import Dataset
 import numpy as np
 from pathlib import Path
 from experiments.systems.pendulum import Pendulum
+from tqdm import tqdm
 
 
 from representation_learning.models.distillation import create_distillation_model
@@ -12,9 +13,10 @@ class ReachabilityDataset(Dataset):
     def __init__(
         self, 
         data_path: Path,
+        normalize,
         distillation_model: Optional[torch.nn.Module] = None,
         use_representations: bool = True,
-        size: Optional[int] = None
+        size: Optional[int] = None,
     ):
         """
         Dataset for reachability classification.
@@ -24,44 +26,54 @@ class ReachabilityDataset(Dataset):
             distillation_model: Pre-trained distillation model for getting representations
             use_representations: Whether to use learned representations or raw coordinates
         """
-        self.data = self._load_and_process_data(data_path)
         self.distillation_model = distillation_model
         self.use_representations = use_representations
         self.size = size
-    def _load_and_process_data(self, data_path: Path) -> np.ndarray:
+        self.normalize = normalize
+        self.data_max, self.data_min = 0., 0.
+        self.sources, self.targets, self.labels = self._load_and_process_data(data_path)
+    
+    def _load_and_process_data(self, data_path: Path) -> Tuple[np.ndarray, np.ndarray]:
         """Load and normalize data."""
         # load csv file
-        print(data_path)
         data = np.load(data_path)
         sources = data['sources']
         targets = data['targets']
         labels = data['labels']
+        v_data = np.vstack([sources, targets])
+        self.data_min, self.data_max = np.min(v_data, axis=0), np.max(v_data, axis=0)
+        
+        sources = self.normalize(sources, self.data_min, self.data_max)
+        targets = self.normalize(targets, self.data_min, self.data_max)
 
-        processed = np.zeros((sources.shape[0], 5))
-        processed[:, 0] = sources[:, 0] / np.pi
-        processed[:, 1] = sources[:, 1] / (2 * np.pi)
-        processed[:, 2] = targets[:, 0] / np.pi
-        processed[:, 3] = targets[:, 1] / (2 * np.pi)
-        processed[:, 4] = labels
-        return processed
+        repr_sources = []
+        repr_targets = []
+        if self.use_representations and self.distillation_model is not None:
+            for i in tqdm(range(sources.shape[0]), desc="Generating representations"):
+                repr_sources.append(self.distillation_model(torch.tensor(sources[i]).unsqueeze(0).float()).squeeze(0).detach().numpy())
+                repr_targets.append(self.distillation_model(torch.tensor(targets[i]).unsqueeze(0).float()).squeeze(0).detach().numpy())
+            sources = np.array(repr_sources)
+            targets = np.array(repr_targets)
+    
+        return sources, targets, labels
         
     def __len__(self) -> int:
-        return len(self.data)
+        return len(self.sources)
     
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         # Get source and target states
-        source = torch.tensor(self.data[idx, :2]).float()
-        target = torch.tensor(self.data[idx, 2:4]).float()
+        source = torch.tensor(self.sources[idx]).float()
+        target = torch.tensor(self.targets[idx]).float()
         
-        if self.use_representations and self.distillation_model is not None:
-            with torch.no_grad():
-                source_repr = self.distillation_model(source.unsqueeze(0)).squeeze(0)
-                target_repr = self.distillation_model(target.unsqueeze(0)).squeeze(0)
-            features = torch.cat([source_repr, target_repr], dim=0)
-        else:
-            features = torch.cat([source, target], dim=0)
+        # if self.use_representations and self.distillation_model is not None:
+        #     with torch.no_grad():
+        #         source_repr = self.distillation_model(source.unsqueeze(0)).squeeze(0)
+        #         target_repr = self.distillation_model(target.unsqueeze(0)).squeeze(0)
+        #     features = torch.cat([source_repr, target_repr], dim=0)
+        # else:
+        features = torch.cat([source, target], dim=0)
         
-        label = torch.tensor(self.data[idx, 4]).float()
+        label = torch.tensor(self.labels[idx]).float()
         return features, label
 
 

@@ -7,6 +7,7 @@ from typing import Dict, Any, Tuple
 from ..utils.logging_utils import log_epoch, log_step, register_validation
 from ..utils.visualization import plot_trajectory_comparison, evaluate_full_trajectories
 from pathlib import Path
+import numpy as np
 
 class TransformerTrainer(BaseTrainer):
     def _create_model(self) -> torch.nn.Module:
@@ -15,9 +16,10 @@ class TransformerTrainer(BaseTrainer):
         
     def _create_data_loaders(self) -> Tuple[DataLoader, DataLoader]:
         full_dataset = SequenceDataset(
-            self.config['data']['data_dir'], 
+            self.config['data']['data_dir'],  
             self.config['data']['seq_len'],
-            self.config['data']['mask_ratio_range']
+            self.config['data']['mask_ratio_range'],
+            lambda traj, data_min, data_max: self.system.normalize(traj, data_min, data_max)
         )
         total_size = len(full_dataset)
         train_size = int(0.8 * total_size)
@@ -32,7 +34,7 @@ class TransformerTrainer(BaseTrainer):
             batch_size=self.config['training']['batch_size'], 
             shuffle=True
         )
-        val_loader = DataLoader(val_dataset, batch_size=64)
+        val_loader = DataLoader(val_dataset, batch_size=64, shuffle=False)
         
         return train_loader, val_loader
         
@@ -43,20 +45,33 @@ class TransformerTrainer(BaseTrainer):
         self.num_batches = len(self.train_loader)
         
         pbar = self.create_progress_bar(self.train_loader, "Training")
-        for batch_idx, (full_traj, _, traj, _) in enumerate(pbar):
-            batch = {'full_traj': full_traj, 'traj': traj}
+        for batch_idx, (full_traj, _, traj, _, padding_mask) in enumerate(pbar):
+            batch = {'full_traj': full_traj, 'traj': traj, 'padding_mask': padding_mask}
             loss = self._train_step(batch=batch, batch_idx=batch_idx)
             total_loss += loss
             pbar.set_postfix({'loss': f'{loss:.4f}', 
                              'avg_loss': f'{total_loss/(batch_idx+1):.4f}'})
         
         return total_loss / self.num_batches
+
+    def _create_criterion(self) -> torch.nn.Module:
+        return torch.nn.MSELoss(reduction='none')
+        # return torch.nn.MSELoss(reduction='mean')
         
     def _train_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> float:
-        traj, full_traj = batch['traj'].to(self.device), batch['full_traj'].to(self.device)
+        traj, full_traj, padding_mask = batch['traj'].to(self.device), batch['full_traj'].to(self.device), batch['padding_mask'].to(self.device)
         self.optimizer.zero_grad()
         output = self.model(traj)
-        loss = self.criterion(output, full_traj)
+        loss = self.criterion(output, full_traj) 
+        
+        loss = loss * padding_mask.unsqueeze(-1)
+        num_valid = padding_mask.sum() * 2
+        
+        if num_valid > 0:
+            loss = loss.sum() / num_valid
+        else:
+            loss = loss.sum() * 0.0
+
         loss.backward()
         if self.config['training'].get('clip_value', None):
             torch.nn.utils.clip_grad_norm_(
@@ -75,8 +90,8 @@ class TransformerTrainer(BaseTrainer):
         
         pbar = self.create_progress_bar(self.val_loader, "Validating")
         with torch.no_grad():
-            for batch_idx, (full_traj, _, traj, _) in enumerate(pbar):
-                batch = {'full_traj': full_traj, 'traj': traj}
+            for batch_idx, (full_traj, _, traj, _, padding_mask) in enumerate(pbar):
+                batch = {'full_traj': full_traj, 'traj': traj, 'padding_mask': padding_mask}
                 loss = self._validation_step(batch=batch, batch_idx=batch_idx)
                 total_loss += loss
                 pbar.set_postfix({'loss': f'{loss:.4f}', 
@@ -85,9 +100,15 @@ class TransformerTrainer(BaseTrainer):
         return total_loss / self.num_batches
 
     def _validation_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> float:    
-        traj, full_traj = batch['traj'].to(self.device), batch['full_traj'].to(self.device)
+        traj, full_traj, padding_mask = batch['traj'].to(self.device), batch['full_traj'].to(self.device), batch['padding_mask'].to(self.device)
         output = self.model(traj)
-        loss = self.criterion(output, full_traj)
+        loss = self.criterion(output, full_traj) 
+        loss = loss * padding_mask.unsqueeze(-1)
+        num_valid = padding_mask.sum() * 2
+        if num_valid > 0:
+            loss = loss.sum() / num_valid
+        else:
+            loss = loss.sum() * 0.0
         return loss.item()
     
     @register_validation('full_trajectory')
@@ -99,8 +120,8 @@ class TransformerTrainer(BaseTrainer):
 
         pbar = self.create_progress_bar(self.val_loader, "Validating Full Trajectory")
         with torch.no_grad():
-            for batch_idx, (full_traj, _, traj, _) in enumerate(pbar):
-                batch = {'full_traj': full_traj, 'traj': full_traj}
+            for batch_idx, (full_traj, _, traj, _, padding_mask) in enumerate(pbar):
+                batch = {'full_traj': full_traj, 'traj': full_traj, 'padding_mask': padding_mask}
                 loss = self._validation_full_traj_step(batch=batch, batch_idx=batch_idx)
                 total_loss += loss
                 pbar.set_postfix({'loss': f'{loss:.4f}', 
@@ -109,9 +130,15 @@ class TransformerTrainer(BaseTrainer):
         return total_loss / self.num_batches
     
     def _validation_full_traj_step(self, batch: Dict[str, torch.Tensor], batch_idx: int) -> float:
-        traj, full_traj = batch['traj'].to(self.device), batch['full_traj'].to(self.device)
+        traj, full_traj, padding_mask = batch['traj'].to(self.device), batch['full_traj'].to(self.device), batch['padding_mask'].to(self.device)
         output = self.model(traj)
         loss = self.criterion(output, full_traj)
+        loss = loss * padding_mask.unsqueeze(-1)
+        num_valid = padding_mask.sum() * 2
+        if num_valid > 0:
+            loss = loss.sum() / num_valid
+        else:
+            loss = loss.sum() * 0.0
         return loss.item()
 
     def _register_validation_functions(self):

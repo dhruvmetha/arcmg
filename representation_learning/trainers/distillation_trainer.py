@@ -14,7 +14,7 @@ class DistillationTrainer(BaseTrainer):
         return create_distillation_model(**self.config['model']).to(self.device)
     
     def _create_data_loaders(self) -> Tuple[DataLoader]:    
-        full_dataset = DistillationDataset(self.config['data']['path'])
+        full_dataset = DistillationDataset(Path(self.config['data']['path']) / 'dataset.npz')
         
         total_size = len(full_dataset)
         train_size = int(0.8 * total_size)

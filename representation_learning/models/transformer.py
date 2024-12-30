@@ -17,15 +17,15 @@ class PositionalEncoding(nn.Module):
         return x + self.pe[:x.size(0)]
 
 class TransformerModel(nn.Module):
-    def __init__(self, input_dim, d_model, nhead, num_layers, dim_feedforward, use_positional_encoding=False, batch_first=True):
+    def __init__(self, input_dim, latent_dim, nhead, num_layers, dim_feedforward, use_positional_encoding=False, batch_first=True):
         super().__init__()
-        self.input_proj = nn.Linear(input_dim, d_model)
+        self.input_proj = nn.Linear(input_dim, latent_dim)
         self.use_positional_encoding = use_positional_encoding
         if use_positional_encoding:
-            self.pos_encoder = PositionalEncoding(d_model)
-        encoder_layers = nn.TransformerEncoderLayer(d_model, nhead, dim_feedforward, batch_first=True)
+            self.pos_encoder = PositionalEncoding(latent_dim)
+        encoder_layers = nn.TransformerEncoderLayer(latent_dim, nhead, dim_feedforward, batch_first=True)
         self.transformer_encoder = nn.TransformerEncoder(encoder_layers, num_layers)
-        self.output_proj = nn.Sequential(nn.Linear(d_model, 32), nn.ReLU(), nn.Linear(32, input_dim))
+        self.output_proj = nn.Sequential(nn.Linear(latent_dim, 32), nn.ReLU(), nn.Linear(32, input_dim))
 
     def forward(self, src, src_key_padding_mask=None):
         src = self.input_proj(src)
@@ -44,7 +44,7 @@ class TransformerModel(nn.Module):
 def create_transformer(**kwargs):
     default_config = {
         'input_dim': 2,
-        'd_model': 64,
+        'latent_dim': 64,
         'nhead': 4,
         'num_layers': 3,
         'dim_feedforward': 256,
