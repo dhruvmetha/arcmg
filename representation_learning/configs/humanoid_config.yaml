@@ -1,6 +1,6 @@
 # Base configuration that can be extended by specific models
 # set variables in the script
-data_dir: &data_dir /common/users/dm1487/arcmg_datasets/cartpole_1k/cartpole_lqr1k
+data_dir: &data_dir /common/users/dm1487/arcmg_datasets/humanoid_1k/humanoid_learned_1k
 transformer:
   data:
     data_dir: *data_dir
@@ -27,7 +27,7 @@ transformer:
 
 distillation:
   data:
-    path: /common/users/dm1487/tripods/roa_estimation/outputs/cartpole/representation_dataset
+    path: /common/users/dm1487/tripods/roa_estimation/outputs/humanoid/representation_dataset
     max_samples: 100000
 
   model:
@@ -40,7 +40,7 @@ distillation:
     learning_rate: 0.0001
     device: cuda
     clip_value: 1.0
-    save_path: checkpoints/cartpole/distillation_model.pth
+    save_path: checkpoints/humanoid/distillation_model.pth
 
 reachability_classifier:
   generation:
@@ -48,8 +48,8 @@ reachability_classifier:
     samples_per_trajectory: 50
   
   data:
-    path: /common/users/dm1487/tripods/roa_estimation/outputs/cartpole/reachability_dataset/dataset.npz
-  distillation_model: "/common/users/dm1487/tripods/roa_estimation/outputs/cartpole/distillation"
+    path: /common/users/dm1487/tripods/roa_estimation/outputs/humanoid/reachability_dataset/dataset.npz
+  distillation_model: "/common/users/dm1487/tripods/roa_estimation/outputs/humanoid/distillation"
 
   model:
     input_dim: 8  # 64*2 if using representations, 2*2 if using raw coordinates

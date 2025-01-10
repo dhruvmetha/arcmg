@@ -1,6 +1,6 @@
 # Base configuration that can be extended by specific models
 # set variables in the script
-data_dir: &data_dir /media/dhruv/a7519aee-b272-44ae-a117-1f1ea1796db6/2024/arcmg/data/pendulum_lqr/pendulum_lqr5k/pendulum_lqr5k
+data_dir: &data_dir /common/users/dm1487/arcmg_datasets/pendulum_lqr/pendulum_lqr5k/pendulum_lqr5k
 transformer:
   data:
     data_dir: *data_dir
@@ -27,7 +27,7 @@ transformer:
 
 distillation:
   data:
-    path: /outputs/pendulum/representation_dataset
+    path: /common/users/dm1487/tripods/roa_estimation/outputs/pendulum/representation_dataset
     max_samples: 100000
 
   model:
@@ -40,7 +40,7 @@ distillation:
     learning_rate: 0.0001
     device: cuda
     clip_value: 1.0
-    save_path: checkpoints/cartpole/distillation_model.pth
+    save_path: checkpoints/pendulum/distillation_model.pth
 
 reachability_classifier:
   generation:
@@ -48,8 +48,8 @@ reachability_classifier:
     samples_per_trajectory: 10
   
   data:
-    path: outputs/pendulum/reachability_dataset/dataset.npz
-  distillation_model: "outputs/pendulum/distillation"
+    path: /common/users/dm1487/tripods/roa_estimation/outputs/pendulum/reachability_dataset/dataset.npz
+  distillation_model: "/common/users/dm1487/tripods/roa_estimation/outputs/pendulum/distillation"
 
   model:
     input_dim: 4  # 64*2 if using representations, 2*2 if using raw coordinates
@@ -60,7 +60,7 @@ reachability_classifier:
     use_representations: false
     batch_size: 512
     learning_rate: 0.001
-    num_epochs: 100
+    num_epochs: 200
     device: "cuda"
 
 

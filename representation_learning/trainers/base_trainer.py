@@ -68,7 +68,7 @@ class BaseTrainer(ABC, TrainerLoggingMixin):
         }
         
         # Save regular checkpoint
-        torch.save(checkpoint, path)
+        # torch.save(checkpoint, path)
         
         # Save best model if this is the best performance
         if is_best:

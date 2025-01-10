@@ -56,6 +56,7 @@ Use the `reachability_classifier` section in the config file to tune hyperparame
 
 ### TODO
 #### Generate ROA estimate
+Each dataset has labels for successful and unsuccessful trajectories.
 Generate RoA estimate under the assumption that the system has bistable dynamics. We have to first determine successful and unsuccessful attractors using clustering or other techniques.
 
 #### Evaluate ROA estimate
