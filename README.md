@@ -16,6 +16,19 @@ We need the following files to run the project:
 3. A dataset of trajectories for that system: a folder with a list of `.txt` files, each containing a trajectory. In the parent folder of the dataset, there should be a `labels.txt` file that contains the labels for each trajectory (success or failure).
 4. A config file for the RoA prediction like `representation_learning/configs/pendulum_config.yaml`
 
+
+#### Generate ROA estimate
+To generate an RoA estimate using the reachability classifier, we first need to determine the attractors. We do this by clustering the end points of trajectories. To do so, we run the following script:
+
+```
+./scripts/preprocess_data.sh SYSTEM_NAME
+```
+
+This will generate a `success_attractors.txt` and `failure_attractors.txt` file in the parent directory of the dataset. This will also generate `success_labels.txt` and `failure_labels.txt` files in the same directory, where each trajectory is labeled with the attractor it belongs to. 
+
+This file also creates a train/test split of the data into `train.txt` and `test.txt` files in the same directory. This is used to train the reachability classifier, so as to provide evaluation on unseen data.
+
+
 ### Latent Representation Learning
 
 #### Transformer Training
@@ -55,16 +68,7 @@ Once the reachability dataset is created, we train the reachability classifier o
 Use the `reachability_classifier` section in the config file to tune hyperparameters for the reachability classifier.
 
 ### TODO
-#### Generate ROA estimate
-To generate an RoA estimate using the reachability classifier, we first need to determine the attractors. We do this by clustering the end points of trajectories. To do so, we run the following script:
 
-```
-./scripts/preprocess_data.sh SYSTEM_NAME
-```
 
-This will generate a `success_attractors.txt` and `failure_attractors.txt` file in the parent directory of the dataset. This will also generate `success_labels.txt` and `failure_labels.txt` files in the same directory, where each trajectory is labeled with the attractor it belongs to. 
-
-Each dataset has labels for successful and unsuccessful trajectories.
-Generate RoA estimate under the assumption that the system has bistable dynamics. We have to first determine successful and unsuccessful attractors using clustering or other techniques.
 
 #### Evaluate ROA estimate
