@@ -17,7 +17,7 @@ We need the following files to run the project:
 4. A config file for the RoA prediction like `representation_learning/configs/pendulum_config.yaml`
 
 
-#### Generate ROA estimate
+#### Preprocessing data
 To generate an RoA estimate using the reachability classifier, we first need to determine the attractors. We do this by clustering the end points of trajectories. To do so, we run the following script:
 
 ```
@@ -26,7 +26,9 @@ To generate an RoA estimate using the reachability classifier, we first need to 
 
 This will generate a `success_attractors.txt` and `failure_attractors.txt` file in the parent directory of the dataset. This will also generate `success_labels.txt` and `failure_labels.txt` files in the same directory, where each trajectory is labeled with the attractor it belongs to. 
 
-This file also creates a train/test split of the data into `train.txt` and `test.txt` files in the same directory. This is used to train the reachability classifier, so as to provide evaluation on unseen data.
+This file also creates a train/test split of the data into `train.txt` and `test.txt` files in the same directory.
+
+We will use trajectories in `train.txt` for all further learning steps, and use the `test.txt` file to evaluate the reachability classifier.
 
 
 ### Latent Representation Learning
@@ -69,6 +71,6 @@ Use the `reachability_classifier` section in the config file to tune hyperparame
 
 ### TODO
 
-
+#### Generate ROA estimate
 
 #### Evaluate ROA estimate
