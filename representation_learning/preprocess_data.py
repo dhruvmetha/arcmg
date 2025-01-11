@@ -66,6 +66,7 @@ def get_num_clusters(data, min_clusters=2, max_clusters=10):
         kmeans = KMeans(n_clusters=i, init='k-means++', random_state=42)
         kmeans.fit(data)
         silhouette_scores.append(silhouette_score(data, kmeans.labels_))
+    print(silhouette_scores)
     return np.argmax(silhouette_scores) + min_clusters
 
 def find_attractor(data_dir: str, data: list, name: str):
@@ -90,12 +91,12 @@ def find_attractor(data_dir: str, data: list, name: str):
 
     with open(Path(data_dir).parent / f'{name}_attractor.txt', 'w') as f:
         for i in range(num_clusters):
-            f.write(f'{i}: {np.round(np.array(kmeans.cluster_centers_[i]), 2)}\n')
+            f.write(f'{i}, {np.round(np.array(kmeans.cluster_centers_[i]), 2)}\n')
 
     labels = kmeans.labels_
     print("Cluster centers:")
     for i, center in enumerate(kmeans.cluster_centers_):
-        print(f"Cluster {i} center: {center}", np.bincount(labels)[i])
+        print(f"Cluster {i}", np.bincount(labels)[i])
     
 
     with open(Path(data_dir).parent / f'{name}_labels.txt', 'w') as f:

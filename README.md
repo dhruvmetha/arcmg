@@ -13,7 +13,7 @@ We use the `representation_learning` module to setup this project.
 We need the following files to run the project:
 1. A system .py file in `experiments/` that will get registered in `experiments/__init__.py` as a part of the `system_factory`. For example, `pendulum.py` is a system file.
 2. Register the system into the `system_factory` in `experiments/__init__.py`
-3. A dataset of trajectories for that system: a folder with a list of `.txt` files, each containing a trajectory.
+3. A dataset of trajectories for that system: a folder with a list of `.txt` files, each containing a trajectory. In the parent folder of the dataset, there should be a `labels.txt` file that contains the labels for each trajectory (success or failure).
 4. A config file for the RoA prediction like `representation_learning/configs/pendulum_config.yaml`
 
 ### Latent Representation Learning
@@ -56,6 +56,14 @@ Use the `reachability_classifier` section in the config file to tune hyperparame
 
 ### TODO
 #### Generate ROA estimate
+To generate an RoA estimate using the reachability classifier, we first need to determine the attractors. We do this by clustering the end points of trajectories. To do so, we run the following script:
+
+```
+./scripts/preprocess_data.sh SYSTEM_NAME
+```
+
+This will generate a `success_attractors.txt` and `failure_attractors.txt` file in the parent directory of the dataset. This will also generate `success_labels.txt` and `failure_labels.txt` files in the same directory, where each trajectory is labeled with the attractor it belongs to. 
+
 Each dataset has labels for successful and unsuccessful trajectories.
 Generate RoA estimate under the assumption that the system has bistable dynamics. We have to first determine successful and unsuccessful attractors using clustering or other techniques.
 
